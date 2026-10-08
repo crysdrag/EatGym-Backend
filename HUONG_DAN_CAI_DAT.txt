@@ -1,0 +1,206 @@
+============================================================
+          HƯỚNG DẪN CÀI ĐẶT VÀ CHẠY EATGYM API
+============================================================
+
+1. YÊU CẦU MÔI TRƯỜNG
+----------------------
+- Node.js 20 trở lên (khuyến nghị bản LTS)
+- pnpm 9 trở lên
+- PostgreSQL 16 trở lên, hoặc Docker Desktop để chạy PostgreSQL bằng Docker
+
+Kiểm tra nhanh:
+  node --version
+  pnpm --version
+  docker --version
+
+
+2. TẢI VÀO THƯ MỤC DỰ ÁN
+-------------------------
+Mở PowerShell/Terminal tại thư mục chứa mã nguồn EatGym.
+
+Ví dụ:
+  cd duong-dan-toi/EatGym
+
+
+3. CÀI THƯ VIỆN NODE.JS
+-----------------------
+Chạy lệnh sau:
+  pnpm install --shamefully-hoist
+
+Tùy chọn --shamefully-hoist giúp pnpm trên Windows liên kết đầy đủ các
+dependency bắc cầu của Express và JWT. Không đưa thư mục node_modules lên Git.
+
+
+4. KHỞI TẠO POSTGRESQL
+----------------------
+Cách A - Docker Desktop (nhanh nhất)
+
+  docker compose up -d postgres
+
+Lệnh này tạo PostgreSQL với các thông tin mặc định:
+  Host:     localhost
+  Port:     5432
+  Database: eatgym
+  User:     eatgym
+  Password: change-me
+
+Kiểm tra container:
+  docker compose ps
+
+Dừng database khi không dùng nữa:
+  docker compose down
+
+Cách B - PostgreSQL cài trực tiếp
+
+Tạo database và user theo thông tin riêng của bạn. Sau đó sử dụng URL kết nối
+của database đó ở bước cấu hình biến môi trường.
+
+
+5. TẠO FILE BIẾN MÔI TRƯỜNG
+---------------------------
+Sao chép file mẫu:
+  Copy-Item .env.example .env
+
+Mở file .env và thiết lập các giá trị sau:
+
+  PORT=3000
+  NODE_ENV=development
+  DATABASE_URL=postgresql://eatgym:change-me@localhost:5432/eatgym
+  JWT_SECRET=thay-bang-chuoi-ngau-nhien-it-nhat-32-ky-tu
+  JWT_EXPIRES_IN=15m
+  JWT_ISSUER=eatgym-api
+  JWT_AUDIENCE=eatgym-mobile
+  DATABASE_SSL=false
+
+QUAN TRỌNG:
+- JWT_SECRET phải là chuỗi bí mật ngẫu nhiên dài ít nhất 32 ký tự.
+- Không commit file .env lên Git.
+- Khi triển khai thật, thay password PostgreSQL và JWT_SECRET bằng giá trị an
+  toàn; bật DATABASE_SSL=true nếu nhà cung cấp database yêu cầu TLS.
+
+Có thể tạo JWT_SECRET bằng Node.js:
+  node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+
+
+6. TẠO CẤU TRÚC DATABASE
+------------------------
+Chạy migration:
+  pnpm migrate
+
+Migration tạo các bảng:
+- users: tài khoản, email, bcrypt password hash, role và trạng thái hoạt động.
+- user_profiles: hồ sơ thể chất một-một với user, BMR/TDEE đã tính.
+- schema_migrations: lịch sử migration đã áp dụng.
+
+Không sửa file SQL migration đã chạy ở môi trường dùng chung. Nếu cần đổi schema
+sau này, tạo một migration mới trong thư mục sql/.
+
+
+7. KHỞI ĐỘNG API
+----------------
+Chạy chế độ phát triển (tự khởi động lại khi sửa mã):
+  pnpm dev
+
+Hoặc chạy thông thường:
+  pnpm start
+
+Khi thành công, API chạy mặc định tại:
+  http://localhost:3000
+
+Kiểm tra service:
+  Invoke-RestMethod http://localhost:3000/health
+
+Kết quả mong đợi:
+  status
+  ------
+  ok
+
+
+8. KIỂM THỬ CÔNG THỨC DINH DƯỠNG
+---------------------------------
+  pnpm test
+
+Bộ test xác nhận công thức Mifflin-St Jeor, tính TDEE, cách tính tuổi và kiểm
+tra dữ liệu activity level không hợp lệ.
+
+
+9. THỬ API XÁC THỰC
+-------------------
+Đăng ký:
+
+  $registerBody = @{
+    email = 'an@example.com'
+    fullName = 'Nguyen Van An'
+    password = 'mat-khau-it-nhat-8-ky-tu'
+  } | ConvertTo-Json
+
+  $register = Invoke-RestMethod -Method Post `
+    -Uri http://localhost:3000/api/auth/register `
+    -ContentType 'application/json' `
+    -Body $registerBody
+
+  $token = $register.accessToken
+
+Đăng nhập (nếu đã có tài khoản):
+
+  $loginBody = @{
+    email = 'an@example.com'
+    password = 'mat-khau-it-nhat-8-ky-tu'
+  } | ConvertTo-Json
+
+  $login = Invoke-RestMethod -Method Post `
+    -Uri http://localhost:3000/api/auth/login `
+    -ContentType 'application/json' `
+    -Body $loginBody
+
+  $token = $login.accessToken
+
+Xem thông tin tài khoản hiện tại:
+
+  Invoke-RestMethod http://localhost:3000/api/auth/me `
+    -Headers @{ Authorization = "Bearer $token" }
+
+
+10. TẠO HỒ SƠ THỂ CHẤT VÀ TÍNH BMR/TDEE
+----------------------------------------
+  $profileBody = @{
+    sex = 'male'
+    dateOfBirth = '1996-06-12'
+    heightCm = 175
+    weightKg = 72.5
+    activityLevel = 'moderate'
+    fitnessGoal = 'cutting'
+  } | ConvertTo-Json
+
+  Invoke-RestMethod -Method Put `
+    -Uri http://localhost:3000/api/profile `
+    -ContentType 'application/json' `
+    -Headers @{ Authorization = "Bearer $token" } `
+    -Body $profileBody
+
+API trả về BMR và TDEE (kcal/ngày), đồng thời lưu hồ sơ của chính tài khoản có
+token. Các mức activityLevel hợp lệ:
+
+  sedentary   = 1.20  (ít vận động)
+  light       = 1.375 (vận động nhẹ)
+  moderate    = 1.55  (vận động vừa)
+  active      = 1.725 (vận động nhiều)
+  very_active = 1.90  (vận động rất nhiều)
+
+Công thức sử dụng:
+
+  Nam: BMR = 10 x cân_nặng_kg + 6.25 x chiều_cao_cm - 5 x tuổi + 5
+  Nữ: BMR = 10 x cân_nặng_kg + 6.25 x chiều_cao_cm - 5 x tuổi - 161
+  TDEE = BMR x hệ_số_vận_động
+
+
+11. XỬ LÝ SỰ CỐ THƯỜNG GẶP
+---------------------------
+- "JWT_SECRET is required": chưa tạo .env hoặc chưa khai báo JWT_SECRET.
+- Không kết nối được PostgreSQL: kiểm tra docker compose ps, DATABASE_URL,
+  cổng 5432 và username/password.
+- Lỗi module khi dùng pnpm: xóa node_modules, sau đó chạy lại:
+    pnpm install --shamefully-hoist
+- Migration báo migration đã bị thay đổi: không sửa migration đã áp dụng;
+  tạo file migration mới thay vì sửa file cũ.
+

@@ -1,0 +1,5 @@
+# Place your YOLOv8 food detection model weights here.
+# Expected file: yolov8_food.pt
+#
+# This file is NOT committed to Git (too large).
+# Copy it manually to this directory before building Docker.

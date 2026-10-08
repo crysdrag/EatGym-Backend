@@ -1,0 +1,89 @@
+# ============================================================
+#  EatGym – Docker Compose (Full Stack)
+#  PostgreSQL 16 + Node.js API + FastAPI AI Service
+# ============================================================
+
+services:
+  # ---- PostgreSQL Database ----
+  postgres:
+    image: postgres:16-alpine
+    container_name: eatgym-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-eatgym}
+      POSTGRES_USER: ${POSTGRES_USER:-eatgym}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eatgym} -d ${POSTGRES_DB:-eatgym}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - eatgym-net
+
+  # ---- API Server ----
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eatgym-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-eatgym}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-eatgym}
+      DATABASE_SSL: "false"
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_ISSUER: ${JWT_ISSUER:-eatgym-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-eatgym-mobile}
+    ports:
+      - "${API_PORT:-3000}:3000"
+    networks:
+      - eatgym-net
+
+  # ---- AI Service (FastAPI + YOLOv8) ----
+  ai:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: eatgym-ai
+    restart: unless-stopped
+    environment:
+      YOLO_MODEL_PATH: /app/models/yolov8_food.pt
+    ports:
+      - "${AI_PORT:-8000}:8000"
+    networks:
+      - eatgym-net
+
+  # ---- Migration Runner (run once) ----
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eatgym-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-eatgym}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-eatgym}
+      DATABASE_SSL: "false"
+      JWT_SECRET: ${JWT_SECRET}
+    command: ["node", "src/db/migrate.js"]
+    networks:
+      - eatgym-net
+    profiles:
+      - migrate
+
+networks:
+  eatgym-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+

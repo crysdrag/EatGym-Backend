@@ -15,6 +15,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eatgym} -d ${POSTGRES_DB:-eatgym}"]
       interval: 5s
@@ -39,7 +40,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-eatgym}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-eatgym}
       DATABASE_SSL: "false"
       JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-30d}
       JWT_ISSUER: ${JWT_ISSUER:-eatgym-api}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-eatgym-mobile}
     ports:
@@ -79,6 +80,22 @@ services:
       - eatgym-net
     profiles:
       - migrate
+
+  # ---- Ngrok Tunnel (Tên miền cố định miễn phí, đổi PC sang Mac không đổi IP) ----
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: eatgym-ngrok
+    restart: unless-stopped
+    command:
+      - "http"
+      - "api:3000"
+      - "--url=${NGROK_DOMAIN:-kindly-absolve-concur.ngrok-free.dev}"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN:-3KTagn069OqtZ0BMJzDkct9Cfpe_4WrpDoTAEeJRBJwuq5He4}
+    depends_on:
+      - api
+    networks:
+      - eatgym-net
 
 networks:
   eatgym-net:

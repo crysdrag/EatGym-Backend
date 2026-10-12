@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { pool } from '../../../../EatGym/src/db/pool.js';
-import { ApiError } from '../../../../EatGym/src/errors.js';
-import { requireAuth } from '../../../../EatGym/src/middleware/auth.js';
-import { allocateCompensation } from '../../../../EatGym/src/nutrition/compensation.js';
+import { pool } from '../db/pool.js';
+import { ApiError } from '../errors.js';
+import { requireAuth } from '../middleware/auth.js';
+import { allocateCompensation } from '../nutrition/compensation.js';
 
 const router = Router();
 router.use(requireAuth);

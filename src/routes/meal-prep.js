@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { pool } from '../../../../EatGym/src/db/pool.js';
-import { ApiError } from '../../../../EatGym/src/errors.js';
-import { requireAuth, requireRole } from '../../../../EatGym/src/middleware/auth.js';
-import { convertIngredientWeight } from '../../../../EatGym/src/nutrition/meal-prep.js';
+import { pool } from '../db/pool.js';
+import { ApiError } from '../errors.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
+import { convertIngredientWeight } from '../nutrition/meal-prep.js';
 
 const router = Router();
 router.use(requireAuth);

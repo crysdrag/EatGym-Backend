@@ -1,3 +1,4 @@
+import http from 'node:http';
 import express from 'express';
 import helmet from 'helmet';
 import authRouter from './routes/auth.js';
@@ -15,6 +16,38 @@ export const app = express();
 
 app.disable('x-powered-by');
 app.use(helmet());
+
+// Proxy AI Food Detection to eatgym-ai container (FastAPI port 8000)
+app.use('/api/v1/detect', (req, res) => {
+  const aiHost = process.env.AI_HOST || (process.env.NODE_ENV === 'production' ? 'ai' : '127.0.0.1');
+  const aiPort = process.env.AI_PORT || 8000;
+  const search = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+
+  const proxyReq = http.request(
+    {
+      hostname: aiHost,
+      port: aiPort,
+      path: '/api/v1/detect' + search,
+      method: req.method,
+      headers: {
+        ...req.headers,
+        host: `${aiHost}:${aiPort}`,
+      },
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode, proxyRes.headers);
+      proxyRes.pipe(res, { end: true });
+    }
+  );
+
+  proxyReq.on('error', (err) => {
+    console.error('AI Proxy Error:', err);
+    res.status(502).json({ error: { code: 'AI_PROXY_ERROR', message: err.message } });
+  });
+
+  req.pipe(proxyReq, { end: true });
+});
+
 app.use(express.json({ limit: '32kb' }));
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));

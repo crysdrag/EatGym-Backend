@@ -19,6 +19,7 @@ WORKDIR /app
 
 # Install Python dependencies first (layer caching)
 COPY requirements.txt .
+RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code

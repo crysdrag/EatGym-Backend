@@ -10,6 +10,11 @@ router.use(requireAuth);
 const MEAL_SLOTS = new Set(['breakfast', 'lunch', 'dinner', 'snack', 'pre_workout', 'post_workout']);
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
+function isoDate(value) {
+  if (!(value instanceof Date)) return String(value).slice(0, 10);
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+}
+
 function validation(field, message) {
   throw new ApiError(422, message, 'VALIDATION_ERROR', { field });
 }
@@ -190,7 +195,7 @@ router.post('/compensations', async (req, res, next) => {
 function serializeTarget(row) {
   return {
     id: row.id,
-    targetDate: row.target_date,
+    targetDate: isoDate(row.target_date),
     mealSlot: row.meal_slot,
     plannedKcal: Number(row.planned_kcal),
     adjustmentKcal: Number(row.adjustment_kcal),
@@ -202,7 +207,7 @@ function serializeTarget(row) {
 function serializeDeviation(row) {
   return {
     id: row.id,
-    occurredOn: row.occurred_on,
+    occurredOn: isoDate(row.occurred_on),
     targetKcal: Number(row.target_kcal),
     actualKcal: Number(row.actual_kcal),
     deltaKcal: Number(row.delta_kcal),

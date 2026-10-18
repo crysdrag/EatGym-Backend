@@ -207,6 +207,7 @@ Content-Type: application/json
 
 ### Meal-prep yield factors and conversion
 GET {{baseUrl}}/api/meal-prep/yield-factors?search=chicken
+Authorization: Bearer {{token}}
 
 ### Add a meal-prep yield factor (admin role required)
 POST {{baseUrl}}/api/meal-prep/yield-factors

@@ -8,11 +8,20 @@ import { validateProfile } from '../validation.js';
 const router = Router();
 router.use(requireAuth);
 
+function isoDate(value) {
+  if (!(value instanceof Date)) return String(value).slice(0, 10);
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function serializeProfile(row) {
+  const dateOfBirth = isoDate(row.date_of_birth);
   return {
     sex: row.sex,
-    dateOfBirth: row.date_of_birth,
-    age: calculateAge(row.date_of_birth),
+    dateOfBirth,
+    age: calculateAge(dateOfBirth),
     heightCm: Number(row.height_cm),
     weightKg: Number(row.weight_kg),
     activityLevel: row.activity_level,
@@ -115,7 +124,7 @@ router.get('/stats', async (req, res, next) => {
       [req.auth.userId]
     );
     res.json({ history: result.rows.map((row) => ({
-      id: row.id, measuredOn: row.measured_on, weightKg: Number(row.weight_kg),
+      id: row.id, measuredOn: isoDate(row.measured_on), weightKg: Number(row.weight_kg),
       heightCm: row.height_cm === null ? null : Number(row.height_cm),
       bodyFatPercent: row.body_fat_percent === null ? null : Number(row.body_fat_percent), createdAt: row.created_at
     })) });
@@ -140,7 +149,7 @@ router.post('/stats', async (req, res, next) => {
       [req.auth.userId, measuredOn, weightKg, heightCm, bodyFatPercent]
     );
     const row = result.rows[0];
-    res.status(201).json({ stat: { id: row.id, measuredOn: row.measured_on, weightKg: Number(row.weight_kg), heightCm: row.height_cm === null ? null : Number(row.height_cm), bodyFatPercent: row.body_fat_percent === null ? null : Number(row.body_fat_percent), createdAt: row.created_at } });
+    res.status(201).json({ stat: { id: row.id, measuredOn: isoDate(row.measured_on), weightKg: Number(row.weight_kg), heightCm: row.height_cm === null ? null : Number(row.height_cm), bodyFatPercent: row.body_fat_percent === null ? null : Number(row.body_fat_percent), createdAt: row.created_at } });
   } catch (error) { next(error); }
 });
 

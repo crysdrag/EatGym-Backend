@@ -7,6 +7,11 @@ const router = Router();
 router.use(requireAuth);
 const MEALS = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
 
+function isoDate(value) {
+  if (!(value instanceof Date)) return String(value).slice(0, 10);
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+}
+
 function date(value, field) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new ApiError(422, `${field} must use YYYY-MM-DD format.`, 'VALIDATION_ERROR', { field });
   const [y, m, d] = value.split('-').map(Number);
@@ -53,7 +58,7 @@ router.get('/nutrition-logs/summary', async (req, res, next) => {
        WHERE user_id = $1 AND ($2::date IS NULL OR log_date >= $2) AND ($3::date IS NULL OR log_date <= $3)
        GROUP BY log_date ORDER BY log_date`, [req.auth.userId, from, to]
     );
-    res.json({ summary: result.rows.map((row) => ({ date: row.date, totalCalories: Math.round(Number(row.total_calories)), totalProtein: Math.round(Number(row.total_protein)), totalCarbs: Math.round(Number(row.total_carbs)), totalFat: Math.round(Number(row.total_fat)) })) });
+    res.json({ summary: result.rows.map((row) => ({ date: isoDate(row.date), totalCalories: Math.round(Number(row.total_calories)), totalProtein: Math.round(Number(row.total_protein)), totalCarbs: Math.round(Number(row.total_carbs)), totalFat: Math.round(Number(row.total_fat)) })) });
   } catch (error) { next(error); }
 });
 
@@ -73,7 +78,8 @@ router.post('/nutrition-logs', async (req, res, next) => {
       `INSERT INTO nutrition_logs (user_id, log_date, meal_type, food_name, serving_size, serving_unit, calories, protein, carbs, fat)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`, values
     );
-    res.status(201).json({ log: result.rows[0] });
+    const row = result.rows[0];
+    res.status(201).json({ log: { ...row, log_date: isoDate(row.log_date) } });
   } catch (error) { next(error); }
 });
 

@@ -52,7 +52,7 @@ router.put('/meal-targets/:targetDate/:mealSlot', async (req, res, next) => {
     const result = await pool.query(
       `INSERT INTO meal_targets (user_id, target_date, meal_slot, planned_kcal)
        VALUES ($1, $2, $3, $4)
-       ON CONFLICT (user_id, target_date, meal_slot) DO UPDATE SET planned_kcal = EXCLUDED.planned_kcal
+       ON CONFLICT (user_id, target_date, meal_slot) DO UPDATE SET planned_kcal = EXCLUDED.planned_kcal, updated_at = NOW()
        RETURNING id, target_date, meal_slot, planned_kcal, adjustment_kcal, effective_kcal, updated_at`,
       [req.auth.userId, targetDate, mealSlot, plannedKcal]
     );
@@ -165,7 +165,7 @@ router.post('/compensations', async (req, res, next) => {
     for (const allocation of calculation.allocations) {
       const updatedTarget = await client.query(
         `UPDATE meal_targets
-         SET adjustment_kcal = adjustment_kcal - $1
+         SET adjustment_kcal = adjustment_kcal - $1, updated_at = NOW()
          WHERE id = $2
          RETURNING id, target_date, meal_slot, planned_kcal, adjustment_kcal, effective_kcal, updated_at`,
         [allocation.compensationKcal, allocation.id]

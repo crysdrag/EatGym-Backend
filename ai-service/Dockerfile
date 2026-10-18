@@ -5,6 +5,9 @@
 
 FROM python:3.11-slim
 
+# Copy uv trực tiếp từ image chính thức của Astral trên Docker Hub (không cần dùng pip tải)
+COPY --from=astral/uv:latest /uv /bin/uv
+
 # System deps for OpenCV headless
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -17,16 +20,10 @@ RUN groupadd -r eatgym && useradd -r -g eatgym eatgym
 
 WORKDIR /app
 
-# Install Python dependencies first (layer caching)
-# Install uv (công cụ cài package siêu tốc, chịu mạng yếu tốt)
-RUN pip install --no-cache-dir uv
-
-# Cài đặt PyTorch CPU (~180MB, không bị lỗi versions: none hay tải 4GB CUDA)
+# Cài đặt PyTorch CPU bằng uv (hỗ trợ --torch-backend cpu chính chủ, chỉ ~180MB, tải đa luồng)
 RUN uv pip install --system --no-cache \
-    --index-url https://download.pytorch.org/whl/cpu \
-    --extra-index-url https://pypi.org/simple \
-    --index-strategy unsafe-best-match \
-    torch==2.4.0+cpu torchvision==0.19.0+cpu
+    --torch-backend cpu \
+    torch torchvision
 
 # Cài đặt các thư viện còn lại
 COPY requirements.txt .

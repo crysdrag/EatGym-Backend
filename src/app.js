@@ -10,6 +10,7 @@ import nutritionLogsRouter from './routes/nutrition-logs.js';
 import achievementsRouter from './routes/achievements.js';
 import compensationRouter from './routes/compensation.js';
 import mealPrepRouter from './routes/meal-prep.js';
+import healthRouter from './routes/health.js';
 import { errorHandler, notFound } from './middleware/error-handler.js';
 
 export const app = express();
@@ -57,6 +58,7 @@ app.use('/api/nutrition', nutritionRouter);
 app.use('/api/nutrition', compensationRouter);
 app.use('/api/meal-prep', mealPrepRouter);
 app.use('/api/achievements', achievementsRouter);
+app.use('/api/health', healthRouter);
 app.use('/api', recipesRouter);
 app.use('/api', inventoryRouter);
 app.use('/api', nutritionLogsRouter);

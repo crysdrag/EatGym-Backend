@@ -18,11 +18,19 @@ RUN groupadd -r eatgym && useradd -r -g eatgym eatgym
 WORKDIR /app
 
 # Install Python dependencies first (layer caching)
-COPY requirements.txt .
-RUN pip install --no-cache-dir --default-timeout=120 --retries=5 \
+# Install uv (công cụ cài package siêu tốc, chịu mạng yếu tốt)
+RUN pip install --no-cache-dir uv
+
+# Cài đặt PyTorch CPU (~180MB, không bị lỗi versions: none hay tải 4GB CUDA)
+RUN uv pip install --system --no-cache \
     --index-url https://download.pytorch.org/whl/cpu \
-    torch torchvision
-RUN pip install --no-cache-dir --default-timeout=120 --retries=5 -r requirements.txt
+    --extra-index-url https://pypi.org/simple \
+    --index-strategy unsafe-best-match \
+    torch==2.4.0+cpu torchvision==0.19.0+cpu
+
+# Cài đặt các thư viện còn lại
+COPY requirements.txt .
+RUN uv pip install --system --no-cache -r requirements.txt
 
 # Copy application code
 COPY app/ ./app/

@@ -20,7 +20,7 @@ WORKDIR /app
 # Install Python dependencies first (layer caching)
 COPY requirements.txt .
 RUN pip install --no-cache-dir --default-timeout=120 --retries=5 \
-    --extra-index-url https://download.pytorch.org/whl/cpu \
+    --index-url https://download.pytorch.org/whl/cpu \
     torch torchvision
 RUN pip install --no-cache-dir --default-timeout=120 --retries=5 -r requirements.txt
 

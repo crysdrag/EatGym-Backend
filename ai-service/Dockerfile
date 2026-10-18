@@ -20,6 +20,9 @@ RUN groupadd -r eatgym && useradd -r -g eatgym eatgym
 
 WORKDIR /app
 
+# Tăng timeout mạng cho uv lên 3600s (1 tiếng) để không bị ngắt giữa chừng
+ENV UV_HTTP_TIMEOUT=3600
+
 # Cài đặt PyTorch CPU bằng uv (hỗ trợ --torch-backend cpu chính chủ, chỉ ~180MB, tải đa luồng)
 RUN uv pip install --system --no-cache \
     --torch-backend cpu \

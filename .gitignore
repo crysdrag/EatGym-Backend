@@ -4,3 +4,5 @@ coverage/
 npm-debug.log*
 pnpm-debug.log*
 ngrok.exe
+__pycache__/
+*.py[cod]

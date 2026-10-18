@@ -8,6 +8,7 @@ FROM python:3.11-slim
 # System deps for OpenCV headless
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+        libgl1 \
         libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -18,8 +19,10 @@ WORKDIR /app
 
 # Install Python dependencies first (layer caching)
 COPY requirements.txt .
-RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --default-timeout=120 --retries=5 \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    torch torchvision
+RUN pip install --no-cache-dir --default-timeout=120 --retries=5 -r requirements.txt
 
 # Copy application code
 COPY app/ ./app/
